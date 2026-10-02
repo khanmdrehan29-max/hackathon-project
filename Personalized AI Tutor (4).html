@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Personalized AI Tutor</title>
+<style>
+:root{--bg:#0d0c0a;--card:#181612;--line:#2c2820;--tx:#f2ede3;--mu:#948d7e;--ac:#f3b62f;--ok:#6fcf8a;--bad:#ee7a6b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f7f3ea;--card:#fffdf8;--line:#ddd5c3;--tx:#1d1a14;--mu:#6f685a;--ac:#b57900;--ok:#1f8a4c;--bad:#c2410c}}
+:root[data-theme="light"]{--bg:#f7f3ea;--card:#fffdf8;--line:#ddd5c3;--tx:#1d1a14;--mu:#6f685a;--ac:#b57900;--ok:#1f8a4c;--bad:#c2410c}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:740px;margin:0 auto;padding:20px 16px 70px}
+h1{font:400 32px/1.15 Georgia,serif;margin:6px 0}h2{font:400 22px Georgia,serif;margin:0 0 8px}h3{font-size:16px;margin:10px 0 4px}
+p{margin:6px 0}.mu{color:var(--mu)}.ac{color:var(--ac)}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 18px;border-bottom:1px solid var(--line);padding-bottom:12px}
+button,.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--tx);padding:8px 14px;border-radius:8px}
+nav button.on,.p{background:var(--ac);color:#1a1300;border-color:var(--ac);font-weight:600}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.opt{display:block;width:100%;text-align:left;margin:8px 0}.opt:hover:not(:disabled){border-color:var(--ac)}
+.opt.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,transparent)}.opt.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 15%,transparent)}
+.bar{height:9px;background:var(--line);border-radius:5px;overflow:hidden;margin:4px 0 12px}.bar i{display:block;height:100%;background:var(--ac)}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+textarea,input{width:100%;font:inherit;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:10px}
+textarea{font-family:ui-monospace,Menlo,monospace;font-size:14px;min-height:110px}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto;font-size:13px}code{font-family:ui-monospace,Menlo,monospace}
+.tag{display:inline-block;font-size:13px;border:1px solid var(--line);border-radius:20px;padding:1px 10px;color:var(--mu);margin:2px 6px 2px 0}
+.msg{padding:9px 12px;border-radius:10px;margin:8px 0;border:1px solid var(--line)}.msg.u{background:color-mix(in srgb,var(--ac) 12%,transparent);margin-left:30px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}.stats div{border:1px solid var(--line);border-radius:10px;padding:10px}.stats b{font:400 24px Georgia,serif;display:block}
+.chips button{margin:4px 4px 0 0;font-size:13px;padding:5px 10px}
+.note{border-left:3px solid var(--ac);padding:4px 12px;margin:10px 0;color:var(--mu);font-size:14px}
+</style></head><body><main>
+<h1>Personalized AI Tutor</h1>
+<p class="mu">An offline adaptive tutor — diagnoses your level, teaches, quizzes and remembers your progress. No internet or API key needed.</p>
+<nav id="nav"></nav><div id="v"></div></main>
+<script>
+/* ---------------- CONTENT ---------------- */
+const TS=[["py","Python for ML"],["ml","ML Fundamentals"],["nn","Neural Networks"],["cv","CNNs & Computer Vision"],["nlp","NLP & Transformers"],["llm","LLMs & Prompting"],["rag","Embeddings & RAG"],["ev","Evaluation & MLOps"]];
+const TN=Object.fromEntries(TS);
+const LESSON={
+py:{0:"Python is the default language for ML because of NumPy (fast arrays), pandas (tables) and scikit-learn (ready-made models). A NumPy array lets you do `a+b` on whole lists of numbers at once instead of writing a loop — this is called vectorisation and it is far faster than plain Python.\nKey idea: shape matters. A dataset of 100 rows and 4 features is an array of shape (100,4). Most bugs in ML code come from shape mismatches.",
+1:"At an intermediate level, focus on pandas for cleaning (`df.dropna()`, `df.fillna()`, `groupby`) and NumPy broadcasting rules: operations align shapes from the right, so (100,4) + (4,) works but (100,4)+(3,) fails.\nWrite small, testable functions instead of long scripts — it makes debugging a model pipeline far easier."},
+ml:{0:"Machine learning means learning a function from examples instead of writing rules by hand. Supervised learning has labelled examples (input → correct answer): regression predicts a number, classification predicts a category. Unsupervised learning has no labels and finds structure, like clustering similar customers together.\nEvery ML project follows: collect data → split into train/test → train a model → evaluate → improve.",
+1:"Choosing a model is about matching assumptions to data: linear models are fast and interpretable but only capture linear relationships; tree-based models (random forest, gradient boosting) handle non-linear patterns and mixed feature types well with little preprocessing.\nAlways scale features for distance-based or gradient-based models (k-NN, SVM, neural nets, linear regression with gradient descent) — trees don't need it."},
+nn:{0:"A neural network is layers of small units. Each unit multiplies its inputs by learned weights, adds them, and passes the sum through an activation function that adds non-linearity (without it, stacking layers would collapse into one linear function).\nTraining = forward pass (compute prediction) → loss (how wrong it was) → backpropagation (compute gradients using the chain rule) → optimizer step (nudge weights to reduce loss).",
+1:"Watch for vanishing gradients in deep nets using sigmoid/tanh — gradients shrink layer by layer and early layers stop learning. ReLU, batch normalization, and residual (skip) connections all help.\nRegularization — dropout, weight decay, early stopping — controls overfitting by discouraging the network from memorising training data."},
+cv:{0:"Convolutional Neural Networks (CNNs) are built for images. A convolution slides a small filter over the image to detect local patterns like edges; early layers learn edges and textures, deeper layers learn shapes and objects.\nPooling layers shrink the image while keeping the important signal, which reduces computation and adds some position-invariance.",
+1:"Modern CV models rarely train from scratch — transfer learning takes a model pretrained on a huge dataset (like ImageNet) and fine-tunes it on your smaller dataset, which needs far less data and compute.\nData augmentation (random crops, flips, color jitter) is the cheapest way to reduce overfitting on small image datasets."},
+nlp:{0:"Before a model can read text, text is split into tokens (words or sub-words) and converted into numbers. Older models used RNNs, reading text one token at a time — this struggles with long-range context.\nTransformers replaced RNNs using self-attention: every token directly looks at every other token in the sequence to decide what's relevant, which is why they handle long context far better.",
+1:"Self-attention computes query, key and value vectors for each token; attention weights come from how well a token's query matches other tokens' keys. Multi-head attention runs this several times in parallel to capture different kinds of relationships (grammar, meaning, position).\nThis architecture is the base of BERT, GPT and virtually all modern LLMs."},
+llm:{0:"A Large Language Model predicts the next token given everything before it, trained on huge amounts of text. Prompting is how you steer it: be specific about the task, give the format you want, and provide an example when the task is unusual (few-shot prompting).\nLLMs don't 'know' facts the way a database does — they generate plausible continuations, which is why they can hallucinate (state wrong facts confidently).",
+1:"Temperature controls randomness in sampling: near 0 is deterministic and safest for factual tasks; higher values add creativity but more risk of error. System prompts set persistent behaviour, while the conversation carries short-term context.\nFine-tuning adapts a base model's weights to a narrower task; prompting instead adapts behaviour at inference time with no retraining — cheaper but less deeply customised."},
+rag:{0:"An embedding turns text (or an image) into a vector of numbers such that similar meanings end up as nearby vectors. This lets you do semantic search: find documents 'about the same thing' even if they don't share exact words.\nRetrieval-Augmented Generation (RAG) uses this: embed a knowledge base once, embed the user's question, retrieve the closest chunks, and feed them to the LLM so it answers from real sources instead of guessing.",
+1:"Cosine similarity (the angle between two vectors) is the usual metric for embedding search because it ignores vector length and focuses on direction/meaning.\nChunking strategy matters a lot in RAG: chunks that are too large dilute relevance, too small lose context — a common starting point is a few hundred tokens with some overlap between chunks."},
+ev:{0:"Never judge a model on the data it trained on — always keep a separate test set to see how well it generalises. If train accuracy is high but test accuracy is much lower, the model is overfitting (memorising rather than learning patterns).\nFor imbalanced problems (e.g. 1% fraud), accuracy is misleading — a model that always predicts 'not fraud' still scores 99%. Use precision, recall and F1 instead.",
+1:"Precision = of everything predicted positive, how much was actually positive. Recall = of everything actually positive, how much did we catch. There's usually a trade-off, tuned via the classification threshold; F1 is their harmonic mean.\nIn production (MLOps), models degrade over time as real-world data drifts from training data — monitoring, logging, and periodic retraining are as important as the initial training."}};
+const BANK={
+py:[["Why use NumPy arrays instead of Python lists for ML math?",["Vectorised operations run in fast compiled code","They label data automatically","They run on GPUs by default","They use less syntax only"],0,"Vectorised operations avoid slow Python-level loops.",1],
+["`np.array([1,2,3]) + np.array([10,20,30])` gives:",["[11,22,33]","[1,2,3,10,20,30]","Error","[10,40,90]"],0,"NumPy adds element-by-element (vectorised addition).",1],
+["What does `df.groupby('city')['sales'].mean()` do?",["Average sales per city","Total rows per city","Sort by sales","Remove missing cities"],0,"groupby splits by city, then mean() aggregates sales within each group.",2],
+["Shapes (100,4) and (4,) can be added because of:",["Broadcasting rules aligning shapes from the right","Both being exactly equal","Python auto-looping silently","NumPy ignoring shape"],0,"Broadcasting stretches the smaller shape to match, aligned from the trailing dimension.",3],
+["What does `xs[::-1]` do to a Python list?",["Reverses it","Sorts it","Deletes it","Doubles it"],0,"Slicing with step -1 walks the list backwards.",1],
+["A Python **dictionary** gives near O(1) lookup because of:",["Hashing the key to find its slot directly","Scanning every item in order","Sorting keys first","Storing values as strings"],0,"Hash tables compute a key's storage location directly instead of searching.",2],
+["`list comprehension` `[x*2 for x in range(5) if x%2==0]` produces:",["[0,4,8]","[0,2,4,6,8]","[0,1,2,3,4]","Error"],0,"Only even x (0,2,4) pass the filter, each doubled: 0,4,8.",2]],
+ml:[["Which task is supervised learning?",["Clustering customers","Predicting price from labelled examples","Compressing images","Learning from trial-and-error rewards"],1,"Supervised learning needs labelled input-output pairs.",1],
+["Which model predicts a continuous value?",["Logistic regression","Linear regression","k-means","Naive Bayes"],1,"Linear regression outputs a number on a continuous scale.",1],
+["Why scale features before k-NN or gradient descent?",["So no feature dominates purely due to its numeric range","To add more data","To remove labels","To increase the number of classes"],0,"Unscaled large-range features dominate distance and slow convergence.",2],
+["A model with 98% train accuracy and 65% test accuracy most likely is:",["Overfitting","Underfitting","Perfectly balanced","Missing labels"],0,"A big train/test gap signals the model memorised training data.",2],
+["Random forest reduces overfitting compared to one decision tree mainly by:",["Averaging many trees trained on random subsets","Using a single very deep tree","Removing all randomness","Skipping validation entirely"],0,"Averaging decorrelated trees smooths out individual overfitting.",3],
+["Which is an unsupervised technique?",["k-means clustering","Linear regression","Logistic regression","Decision tree classification"],0,"k-means groups data without needing labels.",1],
+["Gradient boosting builds trees:",["Sequentially, each correcting previous errors","All at once independently","Only for classification","Without any loss function"],0,"Boosting is sequential error-correction, unlike random forest's parallel averaging.",3]],
+nn:[["What does an activation function add to a network?",["Non-linearity","Extra data","More labels","Faster storage"],0,"Without non-linearity, stacked layers collapse into one linear map.",1],
+["What does backpropagation compute?",["Gradients of the loss with respect to weights","The dataset size","Class labels","The learning rate value itself"],0,"Gradients say how to adjust each weight to reduce loss.",1],
+["Vanishing gradients are most linked to:",["Deep nets using sigmoid/tanh activations","Tiny datasets","Linear regression","Having too many classes"],0,"Sigmoid/tanh saturate, shrinking gradients through many layers.",2],
+["Dropout helps mainly by:",["Randomly disabling neurons during training to reduce overfitting","Speeding up inference only","Increasing model size","Removing the need for labels"],0,"Dropout forces redundant, more general representations instead of memorisation.",3],
+["A learning rate that's too high usually causes:",["Loss overshooting and diverging instead of decreasing","Training to be perfectly stable","Faster convergence with no downside","No effect at all"],0,"Steps too large overshoot the minimum and can bounce or diverge.",2],
+["Batch normalization mainly helps by:",["Stabilising activations to speed up and steady training","Removing all layers","Replacing the loss function","Deleting the need for labels"],0,"It rescales activations using batch statistics, making deep training more stable.",3],
+["Residual (skip) connections in very deep nets help by:",["Letting gradients flow more directly to earlier layers","Removing the need for activations","Doubling the dataset size","Making the network shallower automatically"],0,"Skip connections ease gradient flow, fighting vanishing gradients in depth.",3]],
+cv:[["What does a convolution filter detect in early CNN layers?",["Edges and simple textures","Full object identities","Text tokens","Random noise only"],0,"Early layers learn low-level patterns like edges; depth builds up complexity.",1],
+["Why use pooling layers?",["To shrink spatial size and reduce computation","To add more channels","To increase image resolution","To label the image"],0,"Pooling downsamples while keeping important signal.",1],
+["Transfer learning in CV means:",["Fine-tuning a model pretrained on a large dataset","Training from random weights every time","Copying images between folders","Skipping the test set"],0,"Reusing pretrained features needs far less data and compute.",2],
+["Best cheap fix for overfitting on a small image dataset?",["Data augmentation","Bigger learning rate only","Removing the test set","More output classes"],0,"Augmentation (crops, flips, jitter) artificially grows data diversity.",2],
+["A filter (kernel) in a CNN is:",["A small matrix of learned weights that slides across the image","The final output label","A random noise generator","The loss function"],0,"Convolution slides this small weight matrix to detect local patterns.",2],
+["Why do CNNs use far fewer parameters than a fully-connected net on images?",["Weight sharing — the same filter is reused across the whole image","They only look at one pixel","They skip training entirely","They ignore color channels"],0,"The same small filter scans everywhere, instead of a unique weight per pixel pair.",3],
+["Object detection differs from image classification by:",["Also locating objects with bounding boxes, not just labelling the whole image","Only working on grayscale images","Not using neural networks at all","Requiring no training data"],0,"Detection finds 'what and where', classification just finds 'what'.",2]],
+nlp:[["What replaced RNNs as the base of modern LLMs?",["Transformers (self-attention)","Decision trees","k-means clustering","Linear regression"],0,"Self-attention handles long-range context far better than sequential RNNs.",1],
+["Self-attention lets each token:",["Directly weigh every other token in the sequence","Only see the previous token","Only see the next token","Ignore all other tokens"],0,"That's the core idea distinguishing attention from RNNs.",1],
+["Tokenization means:",["Splitting text into words/sub-words and mapping to numbers","Translating text to another language","Deleting punctuation only","Running the model backwards"],0,"Text must become numeric tokens before a model can process it.",1],
+["Multi-head attention exists mainly to:",["Capture different kinds of relationships in parallel","Reduce the vocabulary size","Slow down training deliberately","Remove the need for embeddings"],0,"Different heads can focus on grammar, meaning, position, etc. simultaneously.",3],
+["Positional encoding is needed in Transformers because:",["Self-attention alone has no sense of token order","It replaces the embedding layer","It removes the need for attention","It only matters for images"],0,"Attention treats input as a set unless position info is added explicitly.",3],
+["BERT differs from GPT mainly in that BERT is:",["Bidirectional, good for understanding tasks","Only generative, never used for classification","Not based on Transformers","Only trained on images"],0,"BERT reads context from both directions; GPT is trained to predict left-to-right.",3],
+["Named Entity Recognition (NER) is the task of:",["Identifying names of people, places, organisations in text","Translating text to another language","Compressing a sentence","Generating random text"],0,"NER tags spans of text as specific entity types.",1]],
+llm:[["Lower sampling temperature makes output:",["More deterministic and focused","More random","Always longer","Automatically multilingual"],0,"Low temperature concentrates probability on the most likely tokens.",1],
+["Why do LLMs hallucinate?",["They generate plausible text, not verified facts from a database","They copy Wikipedia directly","They only output pre-written answers","They refuse unknown questions always"],0,"LLMs predict likely continuations, which can sound confident but be wrong.",2],
+["Few-shot prompting means:",["Giving a couple of examples in the prompt to show the desired format","Training the model from scratch","Reducing the vocabulary","Using zero context"],0,"Examples in-context steer style/format without retraining.",2],
+["Fine-tuning vs prompting — fine-tuning:",["Updates model weights for a narrower task","Only changes the user's question","Never requires any data","Is identical to prompting"],0,"Fine-tuning adapts weights; prompting steers behaviour without retraining.",3],
+["A 'system prompt' is mainly used to:",["Set persistent behaviour/rules for the whole conversation","Store the user's password","Delete the conversation history","Choose the sampling temperature only"],0,"System prompts set the model's role and constraints before the user even speaks.",2],
+["Chain-of-thought prompting helps mainly with:",["Multi-step reasoning tasks by having the model think step by step","Making responses shorter","Reducing the vocabulary size","Removing hallucination completely"],0,"Asking the model to reason step-by-step often improves accuracy on complex problems.",3],
+["An LLM 'context window' limit means:",["The maximum tokens it can consider at once across prompt and output","The number of users it can serve","How many languages it knows","Its training dataset size"],0,"Beyond the context limit, earlier tokens are no longer visible to the model.",2]],
+rag:[["What is RAG?",["Retrieve relevant documents, then generate an answer from them","Random array generation","Recurrent attention graph","Rapid accuracy gain"],0,"RAG grounds the LLM's answer in retrieved real sources.",1],
+["Why do embeddings enable semantic search?",["Similar meanings map to nearby vectors","They encrypt the text","They translate the text","They shrink file size only"],0,"Vector closeness approximates semantic similarity.",1],
+["Common metric for comparing embedding vectors?",["Cosine similarity","Alphabetical order","File size","Token count"],0,"Cosine similarity measures the angle between vectors, ignoring length.",2],
+["A RAG chunking mistake to avoid:",["Chunks so large they dilute relevance, or so small they lose context","Using any overlap between chunks","Embedding the documents at all","Storing vectors in a database"],0,"Chunk size is a real tuning knob in RAG pipelines.",3],
+["A vector database is used in RAG mainly to:",["Do fast nearest-neighbour search over embeddings","Store raw video files","Replace the LLM entirely","Train the model from scratch"],0,"It indexes embeddings so the closest matches can be retrieved quickly.",2],
+["Why re-embed a knowledge base after major updates?",["So retrieval reflects the current, not stale, content","Embeddings never need updating","To slow down search speed","To increase storage cost only"],0,"Stale embeddings would retrieve outdated information.",2],
+["Compared to fine-tuning, RAG is often preferred when:",["Knowledge changes frequently and must stay current","You want to permanently change the model's writing style","You have unlimited training compute and no time constraints","The task needs no external information at all"],0,"RAG lets you update the knowledge source without retraining the model.",3]],
+ev:[["Why keep a separate test set?",["To measure performance on unseen data","To train faster","To add more features","To create labels automatically"],0,"Test data reveals how well the model generalises.",1],
+["Only 1% of transactions are fraud. Best metric focus?",["Precision/recall (F1), not raw accuracy","Accuracy only","Epoch count","Dataset size"],0,"A model predicting 'never fraud' scores 99% accuracy but is useless.",2],
+["Recall answers which question?",["Of all real positives, how many did we catch?","Of all predicted positives, how many were right?","How fast is the model?","How big is the dataset?"],0,"Recall = true positives / (true positives + false negatives).",2],
+["In production, model performance can degrade due to:",["Data drift between training data and real-world data","Too much monitoring","Using version control","Having a test set"],0,"Real-world distributions shift over time, so monitoring and retraining matter.",3],
+["k-fold cross-validation is mainly useful when:",["Data is limited and a single split would be unreliable","You have infinite data","You want to skip evaluation entirely","The model has no hyperparameters"],0,"Rotating through folds gives a more stable estimate with limited data.",2],
+["Data leakage most commonly happens when:",["Test-set information accidentally influences training","The model is too simple","You use too much training data","You pick a random seed"],0,"Leakage makes offline metrics look better than real-world performance will be.",3],
+["A confusion matrix's four cells are:",["True positive, false positive, true negative, false negative","Mean, median, mode, range","Train, test, validation, deploy","Precision, recall, F1, accuracy"],0,"These four counts are the raw ingredients for every classification metric.",1]]};
+const CODE={py:["Write `mean(xs)` that returns the average of a list of numbers.","Sum the list and divide by its length.","def mean(xs):\n    return sum(xs) / len(xs)\n\nprint(mean([2,4,6]))  # 4.0"],
+ml:["Write `normalize(xs)` that scales a list to the 0-1 range using min-max scaling.","(x - min) / (max - min) for every element.","def normalize(xs):\n    lo, hi = min(xs), max(xs)\n    return [(x - lo) / (hi - lo) for x in xs]\n\nprint(normalize([10,20,30]))  # [0.0, 0.5, 1.0]"],
+nn:["Write `relu(x)` that returns x if positive, else 0.","Use `max(0, x)`.","def relu(x):\n    return max(0, x)\n\nprint(relu(-3), relu(5))  # 0 5"],
+cv:["Write `flatten(img)` that turns a list-of-lists (2D image) into one flat list.","Loop over rows and extend a result list, or use a nested list comprehension.","def flatten(img):\n    return [px for row in img for px in row]\n\nprint(flatten([[1,2],[3,4]]))  # [1,2,3,4]"],
+nlp:["Write `tokenize(text)` that lowercases and splits text into words (no punctuation).","Lowercase, then use `re.findall(r\"[a-z0-9']+\", text)`.","import re\ndef tokenize(text):\n    return re.findall(r\"[a-z0-9']+\", text.lower())\n\nprint(tokenize(\"Hello, World!\"))  # ['hello','world']"],
+llm:["Write `truncate(text, max_tokens)` approximating tokens as words, cutting text short.","Split into words, slice the first `max_tokens`, join back with spaces.","def truncate(text, max_tokens):\n    words = text.split()\n    return ' '.join(words[:max_tokens])\n\nprint(truncate('one two three four', 2))  # 'one two'"],
+rag:["Write `cosine(a,b)` for two equal-length vectors (lists).","dot(a,b) / (|a| * |b|), with |v| = sqrt(sum of squares).","def cosine(a,b):\n    dot = sum(x*y for x,y in zip(a,b))\n    na = sum(x*x for x in a) ** 0.5\n    nb = sum(y*y for y in b) ** 0.5\n    return dot / (na*nb)\n\nprint(cosine([1,0],[1,0]))  # 1.0"],
+ev:["Write `recall(tp, fn)` and `precision(tp, fp)` returning the two metrics.","recall = TP/(TP+FN); precision = TP/(TP+FP).","def recall(tp, fn):\n    return tp / (tp + fn)\n\ndef precision(tp, fp):\n    return tp / (tp + fp)\n\nprint(recall(8,2), precision(8,3))  # 0.8 0.727..."]};
+/* big local knowledge base for the tutor chat */
+const KB=[
+[/overfit/,"**Overfitting** is when a model memorises the training data (including its noise) instead of learning general patterns, so it does great on train data but poorly on new data. Fixes: more data, regularization (dropout, weight decay), simpler models, early stopping, or data augmentation."],
+[/underfit/,"**Underfitting** is when a model is too simple to capture the pattern in the data — poor performance on both train and test sets. Fixes: a more expressive model, better/more features, training longer, or reducing regularization."],
+[/bias.variance|bias-variance/,"The **bias-variance tradeoff**: high bias = too simple, misses patterns (underfitting). High variance = too sensitive to training data specifics (overfitting). Good models balance the two — more data lowers variance, more model capacity lowers bias."],
+[/regulariz/,"**Regularization** discourages a model from fitting noise. L2 (weight decay) shrinks weights smoothly; L1 can zero out weights (feature selection); dropout randomly disables neurons during training; early stopping halts before overfitting sets in."],
+[/gradient descent|optimi[sz]er/,"**Gradient descent** repeatedly moves model weights in the direction that most reduces the loss, scaled by the learning rate. Variants like Adam adapt the step size per-parameter and usually converge faster than plain SGD."],
+[/backprop/,"**Backpropagation** computes how much each weight contributed to the error, using the chain rule from calculus, working backwards from the output layer to the input layer. Gradient descent then uses these gradients to update weights."],
+[/activation|relu|sigmoid|softmax/,"**Activation functions** add non-linearity so networks can learn complex patterns, not just straight lines. ReLU (`max(0,x)`) is the common default for hidden layers; sigmoid squashes to 0-1 for binary probabilities; softmax turns a vector into a probability distribution for multi-class outputs."],
+[/supervised|unsupervised/,"**Supervised learning** uses labelled data (predict house price, spam or not). **Unsupervised learning** has no labels and finds structure on its own, e.g. clustering similar customers or reducing dimensions with PCA."],
+[/reinforcement/,"**Reinforcement learning** trains an agent to take actions in an environment to maximise cumulative reward, learning by trial and error rather than from labelled examples — used in robotics, games, and RLHF for LLM fine-tuning."],
+[/cnn|convolution/,"A **CNN (convolutional neural network)** slides small filters over an image to detect local patterns like edges, building up to complex shapes in deeper layers. It's the standard architecture for image tasks."],
+[/rnn|lstm|recurrent/,"**RNNs** process sequences one step at a time, carrying a hidden state forward. **LSTMs** add gates to better retain long-range information. Both have mostly been replaced by Transformers for text, which handle long context better."],
+[/transformer|attention/,"**Transformers** use self-attention: every token directly looks at every other token to decide what's relevant, instead of processing sequentially like RNNs. This makes them fast to train in parallel and strong at long-range context — the base of BERT and GPT."],
+[/embed/,"**Embeddings** turn text, images, or other data into vectors of numbers such that similar meaning/content ends up as nearby vectors. This powers semantic search, recommendation, and RAG."],
+[/\brag\b|retrieval/,"**RAG (Retrieval-Augmented Generation)** embeds your documents, embeds the user's question, retrieves the closest matching chunks, and feeds them into the LLM's prompt so it answers grounded in real sources instead of guessing."],
+[/fine.?tun/,"**Fine-tuning** continues training a pretrained model's weights on your own (usually smaller) dataset so it specialises for a task. It needs data and compute, but customises behaviour more deeply than prompting alone."],
+[/prompt/,"**Prompt engineering** is designing your input to an LLM to get better output: be specific, state the desired format, give an example (few-shot), and break complex tasks into steps. It's cheap to iterate on compared to fine-tuning."],
+[/temperature/,"**Temperature** controls randomness when an LLM samples the next token. Near 0 = deterministic, focused, best for factual answers. Higher = more varied and creative, but higher risk of errors or nonsense."],
+[/token/,"A **token** is a chunk of text (often a word-piece) that a language model reads or generates one at a time. Model context limits and API pricing are usually measured in tokens, not characters or words."],
+[/hallucinat/,"**Hallucination** is when an LLM states something false but confidently, because it's generating plausible-sounding text rather than looking facts up. RAG (grounding in retrieved documents) is a common mitigation."],
+[/precision|recall|f1/,"**Precision** = of predicted positives, how many were actually correct. **Recall** = of actual positives, how many did the model catch. **F1** is their harmonic mean, useful when you need a single balanced score, especially on imbalanced data."],
+[/confusion matrix/,"A **confusion matrix** shows true positives, false positives, true negatives and false negatives for a classifier — the basis for computing precision, recall, and accuracy directly."],
+[/cross.?valid/,"**Cross-validation** (e.g. k-fold) splits data into k parts, trains on k-1 and validates on the remaining one, rotating through all parts. It gives a more reliable performance estimate than a single train/test split, especially with limited data."],
+[/train.*test.*split|validation set/,"A typical split is **train** (fit the model), **validation** (tune hyperparameters, pick the best model), and **test** (final unbiased evaluation, touched only once). Never let the model see test data during training or tuning."],
+[/feature engineer/,"**Feature engineering** is creating or transforming input variables to help a model learn better — e.g. extracting day-of-week from a date, or combining two columns into a ratio. Good features often matter more than model choice."],
+[/normali[sz]|standardi[sz]e/,"**Normalization** rescales values to a fixed range like 0-1. **Standardization** rescales to mean 0 and standard deviation 1. Both matter for distance-based and gradient-based models (k-NN, SVM, neural nets)."],
+[/\bpca\b|dimension/,"**PCA (Principal Component Analysis)** reduces the number of features while keeping as much variance (information) as possible, by projecting data onto new axes ordered by how much variance they explain. Useful for visualisation and speeding up training."],
+[/cluster|k.means/,"**Clustering** groups similar data points without labels. **k-means** picks k cluster centers, assigns each point to the nearest center, then recomputes centers, repeating until stable — simple and common for customer segmentation etc."],
+[/decision tree|random forest/,"A **decision tree** splits data on feature thresholds to reach a prediction, easy to interpret but prone to overfitting alone. A **random forest** averages many trees trained on random subsets of data/features, which reduces overfitting and boosts accuracy."],
+[/boost|xgboost|gradient boost/,"**Boosting** (e.g. XGBoost, LightGBM) builds trees sequentially, each new tree correcting the errors of the previous ones. It's often the strongest option for structured/tabular data."],
+[/\bsvm\b|support vector/,"A **Support Vector Machine (SVM)** finds the boundary that best separates classes with the widest margin. With kernel tricks it can also handle non-linear boundaries. Works well on smaller, high-dimensional datasets."],
+[/naive bayes/,"**Naive Bayes** classifies using Bayes' theorem, assuming features are independent given the class (a simplification that still works surprisingly well, especially for text classification like spam filtering)."],
+[/dropout/,"**Dropout** randomly disables a fraction of neurons during each training step, which forces the network to not rely on any single neuron and reduces overfitting. It's turned off at inference/prediction time."],
+[/batch norm/,"**Batch normalization** rescales the activations within a layer using the statistics of the current batch, which stabilises and speeds up training of deep networks."],
+[/learning rate/,"The **learning rate** controls how big each gradient descent step is. Too high can overshoot and diverge; too low trains painfully slowly or gets stuck. Schedules that decay the rate over training often work best."],
+[/epoch|batch size/,"An **epoch** is one full pass through the training data. A **batch** is a subset of data used for one gradient update — smaller batches are noisier but generalise better; larger batches are faster per epoch but need careful tuning."],
+[/loss function/,"A **loss function** measures how wrong a prediction is. Mean squared error is common for regression; cross-entropy is standard for classification. Training minimises this loss via gradient descent."],
+[/one.hot/,"**One-hot encoding** turns a categorical value into a vector of 0s with a single 1 marking the category, so models that expect numeric input can use categorical features without implying a false order."],
+[/vector database|vector store/,"A **vector database** (e.g. FAISS, Pinecone, Chroma) stores embeddings and does fast nearest-neighbour search over them — the retrieval half of a RAG pipeline."],
+[/agent/,"An **LLM agent** lets a model plan multiple steps and call tools (search, code execution, APIs) to complete a task, rather than just answering in one shot."],
+[/mlops|deploy/,"**MLOps** covers everything after training: packaging a model, serving it reliably, monitoring for data drift or performance drops, logging predictions, and retraining on a schedule."],
+[/data leak/,"**Data leakage** happens when information from outside the training set (often accidentally from the test set, or a future value) sneaks into training, making performance look better than it really will be in production."],
+[/imbalance/,"**Class imbalance** (e.g. 99% negative, 1% positive) breaks plain accuracy as a metric. Fixes: resampling (oversample minority/undersample majority), class weights in the loss, or metrics like F1/AUC instead of accuracy."],
+[/gan\b/,"A **GAN (Generative Adversarial Network)** pits a generator (creates fake data) against a discriminator (tries to spot fakes); training them against each other produces increasingly realistic generated data."],
+[/diffusion model/,"**Diffusion models** (used by image generators like Stable Diffusion) learn to reverse a process of gradually adding noise to an image, so starting from pure noise they can 'denoise' step by step into a realistic image."],
+[/multimodal/,"**Multimodal models** handle more than one type of data (text, images, audio) in the same model, e.g. answering questions about a photo, or generating an image from a text description."],
+[/lora|peft/,"**LoRA (Low-Rank Adaptation)** fine-tunes a large model cheaply by training small added matrices instead of all the original weights — far less memory and compute than full fine-tuning, with similar results for many tasks."],
+[/rlhf/,"**RLHF (Reinforcement Learning from Human Feedback)** trains a model using human preference rankings on its outputs, teaching it to prefer helpful, safe, well-formatted answers over raw next-token prediction alone."],
+[/context window/,"The **context window** is the maximum number of tokens an LLM can 'see' at once (prompt + conversation + output combined). Longer context lets a model reference more information but costs more compute per request."],
+[/quantiz/,"**Quantization** shrinks a model by storing its weights with fewer bits (e.g. 8-bit or 4-bit instead of 32-bit), trading a little accuracy for much less memory and faster inference — common for running LLMs on consumer hardware."],
+[/positional encoding/,"Since self-attention has no built-in sense of order, **positional encoding** adds information about each token's position in the sequence so the model knows which word came first, second, etc."],
+[/tokeniz.*bpe|byte.pair/,"**Byte-Pair Encoding (BPE)** is a common tokenization algorithm: it starts with individual characters and repeatedly merges the most frequent adjacent pairs, building a vocabulary of common sub-words efficiently."],
+[/explainab|interpret|xai/,"**Explainable AI (XAI)** tries to make model decisions understandable to humans — techniques like SHAP and LIME estimate which input features most influenced a specific prediction, important for trust and debugging."],
+[/bias.*ai|fairness/,"**AI bias** happens when a model's predictions unfairly favour or disadvantage certain groups, usually because the training data reflected real-world biases. Fairness techniques include auditing outputs across groups and rebalancing training data."],
+[/alignment|ai safety/,"**AI alignment** is the effort to make AI systems pursue goals that actually match human intent and values, especially as models become more capable — includes techniques like RLHF, red-teaming, and constitutional AI."],
+[/federated learning/,"**Federated learning** trains a shared model across many devices (like phones) without moving raw user data to a central server — only model updates are shared, which helps privacy."],
+[/mean.*median.*mode|average/,"**Mean** is the sum divided by count (sensitive to outliers). **Median** is the middle value when sorted (robust to outliers). **Mode** is the most frequent value. Use median for skewed data like income."],
+[/standard deviation|variance\b/,"**Variance** measures how spread out data is from the mean (average of squared differences). **Standard deviation** is its square root, in the same units as the data — a common way to describe 'typical' spread."],
+[/correlation|causation/,"**Correlation** measures how two variables move together (from -1 to 1) but does NOT imply **causation** — a third hidden factor can cause both to move together without either causing the other."],
+[/p.?value|hypothesis test/,"A **p-value** is the probability of seeing a result at least this extreme if there were truly no effect (the null hypothesis). A small p-value (commonly <0.05) suggests the observed effect is unlikely to be random chance."],
+[/distribution|gaussian|normal distribution/,"A **normal (Gaussian) distribution** is the classic bell curve: most values cluster near the mean, with symmetric tails. Many natural measurements and ML errors are approximately normal, which is why it's used so often."],
+[/probability\b/,"**Probability** measures how likely an event is, from 0 (impossible) to 1 (certain). In ML, models often output probabilities (e.g. softmax) rather than hard yes/no answers, which lets you set custom decision thresholds."],
+[/matrix|linear algebra/,"**Matrices** are 2D grids of numbers; ML relies on matrix multiplication to apply weights to many inputs at once efficiently. A neural network layer is essentially input-vector × weight-matrix + bias."],
+[/derivative|calculus|chain rule/,"A **derivative** measures how a function's output changes as its input changes slightly — the 'slope'. The **chain rule** lets you compute derivatives of nested functions, which is exactly how backpropagation computes gradients through many layers."],
+[/big o|time complexity/,"**Big O notation** describes how an algorithm's runtime or memory grows as input size grows. O(1) is constant, O(n) is linear, O(n log n) is typical for good sorting, O(n²) means nested loops over the data — important for spotting slow code before it scales badly."],
+[/sort algorithm|quicksort|mergesort/,"Common sorting algorithms: **bubble sort** is simple but slow (O(n²)); **merge sort** and **quicksort** are efficient (O(n log n) average) and used in most language standard libraries."],
+[/recursion/,"**Recursion** is a function calling itself on a smaller version of the problem, with a base case to stop. It's natural for tree/graph problems but can be slower and use more memory than an equivalent loop."],
+[/hash table|dictionary\b/,"A **hash table** (Python dict) stores key-value pairs and gives near-instant (O(1) average) lookup by computing a hash of the key to find its storage slot directly, instead of scanning through everything."],
+[/\bapi\b/,"An **API (Application Programming Interface)** is a defined way for software to talk to other software — e.g. sending a request to an LLM API and getting a JSON response back, without needing to know how it works internally."],
+[/\bsql\b|database/,"**SQL** is the standard language for querying relational databases (tables with rows/columns) using commands like SELECT, WHERE, JOIN. NoSQL databases (like MongoDB) instead store flexible documents, often used for unstructured or fast-changing data."],
+[/\bgit\b|version control/,"**Git** is version control software that tracks changes to code over time, letting multiple people work on the same project, branch off to try ideas safely, and merge changes back together."],
+[/cloud comput|aws|gcp|azure/,"**Cloud computing** rents compute/storage over the internet instead of buying physical servers — useful for training large models on demand (GPUs) without owning the hardware."],
+[/api key|authentication/,"An **API key** is a secret token that identifies and authorises your requests to a service. Never hard-code it into public code — it should be kept secret and loaded from environment variables or a secrets manager."]
+];
+/* ---------------- STATE ---------------- */
+const DF={goal:"Learn AI from scratch",level:"Beginner",ok:false,m:{},seen:{},hist:[],mist:[],pre:null,post:null,chat:[]};
+let S=DF;try{const x=localStorage.getItem("aitutor_v3");if(x)S=Object.assign({},DF,JSON.parse(x))}catch(e){}
+const save=()=>{try{localStorage.setItem("aitutor_v3",JSON.stringify(S))}catch(e){}};
+let tab=S.ok?"path":"start",lab=null,hintN=0,SP=null,asking=false;
+try{if(window.claude&&window.claude.use){window.claude.use("sample").then(x=>{SP=x;if(tab=="tutor")render()}).catch(()=>{})}}catch(e){}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function md(s){return esc(s).split("\n\n").map(p=>"<p>"+p.replace(/\n/g,"<br>").replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>")+"</p>").join("")}
+const p0=t=>S.m[t]??0.12;
+const eff=t=>{if(!S.seen[t])return p0(t);const days=(Date.now()-S.seen[t])/864e5;return p0(t)*Math.exp(-days/25)+p0(t)*(1-Math.exp(-days/25))*0;};
+const diff=t=>p0(t)<.35?1:p0(t)<.65?2:3;
+const level=t=>p0(t)<.35?"beginner":p0(t)<.65?"intermediate":"advanced";
+const nextT=()=>TS.map(t=>t[0]).sort((a,b)=>p0(a)-p0(b))[0];
+function upd(t,ok,d){let p=p0(t);p=ok?p+(1-p)*(.10+.08*d):Math.max(.03,p-p*.18);S.m[t]=Math.max(.02,Math.min(.99,p));S.seen[t]=Date.now();S.hist.push({t,ok,d,ts:Date.now()})}
+/* ---------------- NAV ---------------- */
+function nav(){$("nav").innerHTML=[["path","My path"],["learn","Learn"],["lab","Code lab"],["tutor","Ask tutor"],["dash","Progress"]].map(([k,n])=>`<button class="${tab==k?"on":""}" onclick="go('${k}')">${n}</button>`).join("")}
+function go(t){if(!S.ok&&t!="start")t="start";tab=t;render()}
+function render(){nav();({start,path,learn,lab:labV,tutor,dash})[tab]()}
+/* ---------------- QUIZ ENGINE ---------------- */
+function pickQs(topics,n,dTarget){const out=[];topics.forEach(t=>{const pool=BANK[t].slice().sort((a,b)=>Math.abs(a[4]-dTarget)-Math.abs(b[4]-dTarget)||Math.random()-.5);for(let i=0;i<n;i++)out.push({t,q:pool[i%pool.length][0],opts:pool[i%pool.length][1],ans:pool[i%pool.length][2],exp:pool[i%pool.length][3],d:pool[i%pool.length][4]})});return out.sort(()=>Math.random()-.5)}
+function run(qs,done,label){let i=0,res=[];const show=()=>{
+ if(i>=qs.length){save();return done(res)}
+ const q=qs[i],o=q.opts.map((t,j)=>[t,j]).sort(()=>Math.random()-.5);
+ $("v").innerHTML=`<div class="card"><p><span class="tag">${label} ${i+1}/${qs.length}</span><span class="tag">${TN[q.t]}</span><span class="tag">difficulty ${q.d}/3</span></p><h2>${esc(q.q)}</h2>${o.map(([t,j])=>`<button class="opt" data-j="${j}">${esc(t)}</button>`).join("")}<div id="fb"></div></div>`;
+ document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{const ok=+b.dataset.j==q.ans;
+  document.querySelectorAll(".opt").forEach(x=>{x.disabled=true;if(+x.dataset.j==q.ans)x.classList.add("ok")});if(!ok)b.classList.add("bad");
+  upd(q.t,ok,q.d);if(!ok)S.mist.push({t:q.t,q:q.q,exp:q.exp});res.push({t:q.t,ok});save();
+  $("fb").innerHTML=`<p><b style="color:var(--${ok?"ok":"bad"})">${ok?"Correct.":"Not quite."}</b> ${esc(q.exp)}</p><button class="btn p" id="nx">${i+1<qs.length?"Next":"Finish"}</button>`;$("nx").onclick=()=>{i++;show()}})};show()}
+/* ---------------- ONBOARDING ---------------- */
+function start(){$("v").innerHTML=`<div class="card"><h2>${S.pre==null?"Set your goal and take the diagnostic":"Retake the diagnostic (post-test)"}</h2>
+ <p class="mu">${S.pre==null?TS.length+" questions across "+TS.length+" topics build your learner profile.":"Compare against your first score to measure real improvement."}</p>
+ <h3>Your goal</h3><input id="goal" value="${esc(S.goal)}" aria-label="Goal"><h3>Your current level</h3>
+ <select id="lv" style="width:100%;font:inherit;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:10px">${["Beginner","Some experience","Comfortable with ML"].map(x=>`<option${x==S.level?" selected":""}>${x}</option>`).join("")}</select>
+ <p><button class="btn p" id="sb">Start diagnostic</button></p></div>`;
+ $("sb").onclick=()=>{S.goal=$("goal").value.trim()||S.goal;S.level=$("lv").value;const post=S.pre!=null;
+  const qs=pickQs(TS.map(t=>t[0]),1,2);
+  run(qs,res=>{const sc=Math.round(100*res.filter(r=>r.ok).length/res.length);
+   if(post)S.post=sc;else{S.pre=sc;S.ok=true}
+   S.mist=[];save();tab="path";render()},"Diagnostic")}}
+/* ---------------- PATH ---------------- */
+function path(){const n=nextT();
+ $("v").innerHTML=`<div class="card"><h2>Next best step: ${TN[n]}</h2><p class="mu">Chosen because it's currently your weakest topic. Your level there: ${level(n)}.</p>
+ <button class="btn p" onclick="lessonOf('${n}')">Start lesson</button></div>
+ <div class="card"><h2>Full roadmap toward: ${esc(S.goal)}</h2>${TS.map(([k,nm],i)=>`<div class="row"><span>${i+1}. ${nm}</span><span class="mu">${Math.round(p0(k)*100)}% · ${level(k)}</span></div><div class="bar"><i style="width:${Math.round(p0(k)*100)}%"></i></div>`).join("")}</div>`}
+/* ---------------- LEARN ---------------- */
+function learn(){$("v").innerHTML=`<div class="card"><h2>Pick a topic</h2>${TS.map(([k,n])=>`<button style="margin:4px 4px 0 0" onclick="lessonOf('${k}')">${n} · ${Math.round(p0(k)*100)}%</button>`).join("")}</div>`}
+function lessonOf(t){tab="learn";nav();const lv=p0(t)<.5?0:1;
+ $("v").innerHTML=`<div class="card"><p><span class="tag">${TN[t]}</span><span class="tag">${level(t)}</span><span class="tag">difficulty ${diff(t)}/3</span></p><h2>${TN[t]}</h2>${md(LESSON[t][lv])}
+ ${S.mist.filter(m=>m.t==t).length?`<div class="note">Past mistake here: ${esc(S.mist.filter(m=>m.t==t).slice(-1)[0].q)}</div>`:""}
+ <p><button class="btn p" id="qz">Take adaptive quiz (4 questions)</button> ${SP?`<button id="deep">Ask AI to go deeper</button>`:""}</p><div id="dp"></div></div>`;
+ if($("deep"))$("deep").onclick=async()=>{$("dp").innerHTML=`<div class="card mu">Thinking...</div>`;
+  try{await SP(`Give a deeper, more detailed explanation of "${TN[t]}" for a ${level(t)} learner whose goal is: ${S.goal}. Include one worked example. Max 250 words.`,{cache:false,onText:({text})=>{$("dp").innerHTML=`<div class="card">${md(text)}</div>`}})}catch(e){$("dp").innerHTML=`<div class="card mu">Could not load. Try again.</div>`}};
+ $("qz").onclick=()=>{const qs=pickQs([t],4,diff(t));run(qs,res=>{const c=res.filter(r=>r.ok).length;
+  $("v").innerHTML=`<div class="card"><h2>${c}/${res.length} correct</h2><p>${c>=3?"Strong. Difficulty will increase next time.":c>=2?"Solid progress. Weak points are logged for review.":"No problem — mistakes are saved and future lessons will revisit them."}</p><p>Mastery of ${TN[t]}: <b class="ac">${Math.round(p0(t)*100)}%</b></p><button class="btn p" onclick="go('path')">Continue</button> <button onclick="lessonOf('${t}')">Repeat topic</button></div>`},"Quiz")}}
+/* ---------------- CODE LAB ---------------- */
+function labV(){const t=lab?.t||nextT();
+ $("v").innerHTML=`<div class="card"><h2>Code lab</h2><p class="mu">A Python task for your weakest topic, with hints and a full solution.</p>
+ <div class="chips">${TS.map(([k,n])=>`<button onclick="lab={t:'${k}'};labV()">${n}</button>`).join("")}</div></div><div id="lb"></div>`;
+ drawLab(t)}
+function drawLab(t){lab={t};hintN=0;const c=CODE[t];
+ $("lb").innerHTML=`<div class="card"><p><span class="tag">${TN[t]}</span></p><h2>Task</h2><p>${esc(c[0])}</p><textarea id="cd" spellcheck="false" placeholder="Write your Python code here..."></textarea>
+ <p><button id="hb">Show hint</button> <button id="so">Show solution</button> <button class="btn p" id="ck">I solved it</button></p><div id="hh"></div><pre id="ss" style="display:none"></pre></div>`;
+ $("hb").onclick=()=>{if(hintN==0){$("hh").innerHTML=`<p class="mu">Hint: ${esc(c[1])}</p>`;hintN=1}};
+ $("so").onclick=()=>{$("ss").style.display="block";$("ss").textContent=c[2]};
+ $("ck").onclick=()=>{upd(t,true,3);save();$("lb").insertAdjacentHTML("beforeend",`<div class="note">Marked as solved. Mastery of ${TN[t]} updated.</div>`)}}
+/* ---------------- TUTOR CHAT ---------------- */
+function tutor(){$("v").innerHTML=`<div class="card"><h2>Ask your tutor</h2><p class="mu">${SP?"Live AI is connected — ask literally anything.":`Offline mode: built-in knowledge base covers ${KB.length}+ core AI/ML/CS/stats concepts. Open this page in claude.ai for live AI on any topic.`}</p>
+ <div id="ch">${S.chat.map(m=>`<div class="msg ${m.role[0]}">${md(m.content)}</div>`).join("")}</div>
+ <input id="qi" placeholder="e.g. What is overfitting?" aria-label="Question"><p><button class="btn p" id="sd">Ask</button> <button onclick="S.chat=[];save();tutor()">Clear</button></p>
+ <div class="chips">${["overfitting","transformer attention","RAG","precision recall","gradient descent","embeddings"].map(x=>`<button onclick="$('qi').value='${x}';$('sd').click()">${x}</button>`).join("")}</div></div>`;
+ $("qi").onkeydown=e=>{if(e.key=="Enter")$("sd").click()};
+ $("sd").onclick=async()=>{if(asking)return;const q=$("qi").value.trim();if(!q)return;asking=true;$("qi").value="";
+  S.chat.push({role:"user",content:q});
+  const ch=$("ch");ch.insertAdjacentHTML("beforeend",`<div class="msg u">${md(q)}</div><div class="msg" id="live"><span class="mu">Thinking...</span></div>`);ch.scrollTop=1e9;
+  if(SP){
+   try{const ctx=`Answer the user's question directly and fully, on ANY topic — general knowledge, people, sports, history, current events, coding, anything. Do not redirect them back to AI/ML learning or refuse because it seems off-topic for a tutoring app; just answer like a normal, knowledgeable, helpful assistant. Keep it concise (under 150 words) unless the question needs more detail.\n\nQuestion: ${q}`;
+    const r=await SP(ctx,{cache:false,onText:({text})=>{$("live").innerHTML=md(text)}});
+    S.chat.push({role:"assistant",content:r.text})}
+   catch(e){const hit=KB.find(k=>k[0].test(q.toLowerCase()));const ans=hit?hit[1]:"Live AI request failed, and this isn't in my offline knowledge base either. Please try again.";$("live").innerHTML=md(ans);S.chat.push({role:"assistant",content:ans})}
+  } else {
+   const hit=KB.find(k=>k[0].test(q.toLowerCase()));
+   const ans=hit?hit[1]:`That's not in my offline knowledge base. Open this page in claude.ai to get live AI answers on any topic. Meanwhile try: overfitting, bias-variance, regularization, gradient descent, backpropagation, CNNs, transformers, embeddings, RAG, fine-tuning, prompting, precision/recall, cross-validation, PCA, clustering, boosting, Big O, SQL, or statistics basics.`;
+   $("live").innerHTML=md(ans);S.chat.push({role:"assistant",content:ans})
+  }
+  asking=false;save();$("live")?.removeAttribute("id")}}
+/* ---------------- DASHBOARD ---------------- */
+function radar(){const c=150,R=105,n=TS.length,pt=(i,v)=>[c+R*v*Math.sin(2*Math.PI*i/n),c-R*v*Math.cos(2*Math.PI*i/n)];
+ const grid=[.25,.5,.75,1].map(v=>`<polygon points="${TS.map((_,i)=>pt(i,v).join(",")).join(" ")}" fill="none" stroke="var(--line)"/>`).join("");
+ const poly=TS.map(([k],i)=>pt(i,p0(k)).join(",")).join(" ");
+ const lb=TS.map(([k,nm],i)=>{const[x,y]=pt(i,1.22);return`<text x="${x}" y="${y}" fill="var(--mu)" font-size="10" text-anchor="middle">${nm.split(" ")[0]}</text>`}).join("");
+ return`<svg viewBox="0 0 300 300" style="max-width:320px;width:100%;display:block;margin:auto" role="img" aria-label="Mastery radar chart">${grid}<polygon points="${poly}" fill="var(--ac)" fill-opacity=".3" stroke="var(--ac)" stroke-width="2"/>${lb}</svg>`}
+function dash(){if(!S.ok){$("v").innerHTML=`<div class="card"><p>Complete the diagnostic first to see your dashboard.</p><button class="btn p" onclick="go('start')">Start diagnostic</button></div>`;return}
+ const H=S.hist,acc=H.length?Math.round(100*H.filter(h=>h.ok).length/H.length):0,days=[...new Set(H.map(h=>new Date(h.ts).toDateString()))].length,
+ avg=Math.round(100*TS.reduce((a,[k])=>a+p0(k),0)/TS.length),wk=TS.map(t=>t[0]).sort((a,b)=>p0(a)-p0(b)).slice(0,2).map(k=>TN[k]);
+ $("v").innerHTML=`<div class="card"><h2>Your progress</h2><p class="mu">Goal: ${esc(S.goal)}</p><div class="stats"><div><b>${avg}%</b>overall mastery</div><div><b>${acc}%</b>answer accuracy</div><div><b>${H.length}</b>questions done</div><div><b>${days}</b>active days</div></div>${radar()}
+ ${TS.map(([k,n])=>`<div class="row"><span>${n}</span><span class="mu">${Math.round(p0(k)*100)}% · ${level(k)}</span></div><div class="bar"><i style="width:${Math.round(p0(k)*100)}%"></i></div>`).join("")}
+ <p><b>Weak areas:</b> ${wk.join(", ")}</p></div>
+ <div class="card"><h2>Learning gain</h2><p>Pre-test: <b>${S.pre??"–"}%</b> · Post-test: <b>${S.post??"–"}%</b>${S.post!=null?` · Change: <b class="ac">${S.post-S.pre>=0?"+":""}${S.post-S.pre} pts</b>`:""}</p><button onclick="tab='start';render()">Retake diagnostic</button></div>
+ <div class="card"><h2>Mistake notebook</h2>${S.mist.length?S.mist.slice(-6).reverse().map(m=>`<p><span class="tag">${TN[m.t]}</span>${esc(m.q)}<br><span class="mu">${esc(m.exp)}</span></p>`).join(""):`<p class="mu">No mistakes logged yet.</p>`}</div>
+ <p><button id="ex">Export progress (.json)</button> <button onclick="if(confirm('Reset all progress?')){localStorage.removeItem('aitutor_v3');location.reload()}">Reset</button></p>`;
+ $("ex").onclick=()=>{try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:"application/json"}));a.download="ai-tutor-progress.json";a.click()}catch(e){}}}
+render();
+</script></body></html>
